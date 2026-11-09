@@ -37,6 +37,22 @@ int print_el(void* element, size_t id, size_t i, size_t size, void* ctx)
     return 1;
 }
 
+int inc_el(void* element, size_t id, size_t i, size_t size, void* ctx)
+{
+    val_t *el = (val_t *)element;
+    switch (el->type) {
+        case 0:
+            break;
+        case 1:
+            el->value.int_val += 1;
+            break;
+        case 2:
+            el->value.dbl_val += 0.1;
+            break;
+    }
+    return 1;
+}
+
 int main(int argc, char *argv[])
 {
     storage_t storage;
@@ -63,6 +79,10 @@ int main(int argc, char *argv[])
     obj = storage_push_back(&storage, &id);
     obj->type = 0;
     obj->value.str_val = "end";
+    limit = 10;
+    storage_iter(&storage, print_el, &limit);
+    printf("\n");
+    storage_iter(&storage, inc_el, &limit);
     limit = 10;
     storage_iter(&storage, print_el, &limit);
     printf("\n");

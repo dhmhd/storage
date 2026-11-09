@@ -16,7 +16,6 @@ typedef struct storage
     size_t size;
     size_t id_capacity;
     size_t cur_id;
-    uint8_t* swap_place;
 } storage_t;
 
 static inline int storage_init(
@@ -46,13 +45,6 @@ static inline int storage_init(
         memset(storage, 0, sizeof(*storage));
         return 0;
     }
-    storage->swap_place = (uint8_t*)malloc(element_size);
-    if (!storage->swap_place)
-    {
-        free(storage->data);
-        memset(storage, 0, sizeof(*storage));
-        return 0;
-    }
     return 1;
 }
 
@@ -61,7 +53,6 @@ static inline void storage_free(storage_t* storage)
     free(storage->data);
     free(storage->rindex);
     free(storage->index);
-    free(storage->swap_place);
     memset(storage, 0, sizeof(*storage));
 }
 
@@ -146,32 +137,32 @@ static inline void* storage_push_back(storage_t* storage, size_t *ret_id)
     return data;
 }
 
-static inline void storage_delete(storage_t* storage, size_t id)
+static inline int storage_delete(storage_t* storage, size_t id)
 {
     if (id >= storage->cur_id)
     {
-        return;
+        return 0;
     }
     size_t data_idx = storage->index[id];
     if (data_idx >= storage->size)
     {
-        return;
+        return 0;
     }
     size_t last_data_idx = storage->size - 1;
     size_t last_id = storage->rindex[last_data_idx];
     if (data_idx != last_data_idx)
     {
-        size_t sz = storage->element_size;
-        memcpy(storage->swap_place, storage->data + data_idx * sz, sz);
-        memcpy(storage->data + data_idx * sz, storage->data + last_data_idx * sz, sz);
-        memcpy(storage->data + last_data_idx * sz, storage->swap_place, sz);
+        memcpy(
+            storage->data + data_idx * storage->element_size,
+            storage->data + last_data_idx * storage->element_size,
+            storage->element_size);
+        storage->rindex[data_idx] = last_id;
+        storage->index[last_id] = data_idx;
     }
-    size_t tmp_rindex = storage->rindex[data_idx];
-    storage->rindex[data_idx] = storage->rindex[last_data_idx];
-    storage->rindex[last_data_idx] = tmp_rindex;
-    storage->index[id] = last_data_idx;
-    storage->index[last_id] = data_idx;
+    storage->rindex[last_data_idx] = id;
     storage->size--;
+    storage->index[id] = storage->size;
+    return 1;
 }
 
 static inline void* storage_get(storage_t *storage, size_t id)
